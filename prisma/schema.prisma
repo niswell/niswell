@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User account with roles and permissions
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  passwordHash          String
+  emailVerified         Boolean     @default(false)
+  emailVerifiedAt       DateTime?
+
+  // Profile
+  displayName           String?
+  avatar                String?
+
+  // Account state: pending, active, restricted, suspended, banned, deleted, legal_hold
+  accountState          String      @default("pending")
+  accountStateChangedAt DateTime    @default(now())
+
+  // MFA
+  mfaEnabled            Boolean     @default(false)
+  totpSecret            String?
+  backupCodes           String[]    @default([])
+
+  // Security
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  lastLoginUserAgent    String?
+  passwordChangedAt     DateTime?
+  accountLockedUntil    DateTime?
+  failedLoginAttempts   Int         @default(0)
+
+  // Audit
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  deletedAt             DateTime?
+
+  // Relations
+  roles                 UserRole[]
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  devices               Device[]
+
+  @@index([email])
+  @@index([accountState])
+}
+
+// Role-based access control
+model Role {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([name])
+}
+
+// Permissions for each role
+model Permission {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  resource    String    // e.g., "users", "streams", "payments"
+  action      String    // e.g., "create", "read", "update", "delete"
+  roles       Role[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([resource, action])
+  @@index([resource])
+}
+
+// User role assignment
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+// Session management
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Token info
+  refreshToken  String   @unique
+  accessToken   String?
+
+  // Device tracking
+  deviceId      String?
+  ipAddress     String
+  userAgent     String
+
+  // Timing
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  lastActivityAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([expiresAt])
+}
+
+// Device tracking for multi-device sessions
+model Device {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String?
+  type          String    // mobile, desktop, tablet
+  os            String?
+  browser       String?
+
+  ipAddress     String
+  lastIpAddress String?
+
+  // Security
+  trustedUntil  DateTime?
+  isVerified    Boolean   @default(false)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastUsedAt    DateTime?
+
+  @@index([userId])
+}
+
+// Audit log for compliance
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action        String   // e.g., "user.login", "user.mfa.enable", "user.password.change"
+  resource      String   // e.g., "user", "session", "role"
+  resourceId    String?  // ID of affected resource
+
+  ipAddress     String?
+  userAgent     String?
+
+  changes       Json?    // What changed (oldValue -> newValue)
+  status        String   @default("success") // success, failure
+  errorMessage  String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resourceId])
+  @@index([createdAt])
+}
+
+// Login attempt tracking for security
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String
+  successful Boolean
+  reason    String?  // "invalid_password", "mfa_required", etc.
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+// Password reset tokens
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// Email verification tokens
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([token])
+}
