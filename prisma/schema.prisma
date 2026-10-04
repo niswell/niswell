@@ -49,6 +49,8 @@ model User {
   sessions              Session[]
   auditLogs             AuditLog[]
   devices               Device[]
+  viewerProfile         ViewerProfile?
+  creatorProfile        CreatorProfile?
 
   @@index([email])
   @@index([accountState])
@@ -248,8 +250,8 @@ model ViewerProfile {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  blockedUsers          UserBlock[]
-  blockedByUsers        UserBlock[]
+  blockedUsers          UserBlock[]   @relation("blocker")
+  blockedByUsers        UserBlock[]   @relation("blocked")
   reports               UserReport[]
   subscriptions         CreatorSubscription[]
 
@@ -554,16 +556,4 @@ model CreatorSubscription {
   @@index([subscriberProfileId])
   @@index([creatorProfileId])
   @@index([status])
-}
-
-// Extend User model with profile relations
-model UserExtended {
-  id                    String    @id @default(cuid())
-  userId                String    @unique
-
-  viewerProfile         ViewerProfile?
-  creatorProfile        CreatorProfile?
-  studio                Studio?
-
-  @@index([userId])
 }
