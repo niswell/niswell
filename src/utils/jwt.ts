@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -16,14 +16,14 @@ export interface TokenPayload {
 
 export function generateAccessToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
   return jwt.sign(payload as object, JWT_SECRET as string, {
-    expiresIn: ACCESS_EXPIRY,
+    expiresIn: ACCESS_EXPIRY as SignOptions['expiresIn'],
     algorithm: 'HS256',
   } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
   return jwt.sign(payload as object, JWT_SECRET as string, {
-    expiresIn: REFRESH_EXPIRY,
+    expiresIn: REFRESH_EXPIRY as SignOptions['expiresIn'],
     algorithm: 'HS256',
     jti: uuidv4(),
   } as jwt.SignOptions);
