@@ -249,7 +249,7 @@ export class ViewerProfileService {
       },
     });
 
-    return blocks.map((block) => ({
+    return blocks.map((block: any) => ({
       blockedUserId: block.blockedProfile.userId,
       displayName: block.blockedProfile.user.displayName,
       avatar: block.blockedProfile.user.avatar,

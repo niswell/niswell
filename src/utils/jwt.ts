@@ -15,18 +15,18 @@ export interface TokenPayload {
 }
 
 export function generateAccessToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload as object, JWT_SECRET as string, {
     expiresIn: ACCESS_EXPIRY,
     algorithm: 'HS256',
-  });
+  } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload as object, JWT_SECRET as string, {
     expiresIn: REFRESH_EXPIRY,
     algorithm: 'HS256',
-    jti: uuidv4(), // JWT ID for revocation tracking
-  });
+    jti: uuidv4(),
+  } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): TokenPayload | null {

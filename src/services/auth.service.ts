@@ -164,7 +164,7 @@ export class AuthService {
       },
     });
 
-    const failedAttempts = recentAttempts.filter((a) => !a.successful).length;
+    const failedAttempts = recentAttempts.filter((a: any) => !a.successful).length;
     if (failedAttempts >= 5) {
       await prisma.loginAttempt.create({
         data: {
@@ -272,7 +272,7 @@ export class AuthService {
       const mfaToken = generateAccessToken({
         userId: user.id,
         email: user.email,
-        roles: user.roles.map((ur) => ur.role.name),
+        roles: user.roles.map((ur: any) => ur.role.name),
         sessionId: 'temp-mfa',
       });
 
@@ -304,7 +304,7 @@ export class AuthService {
         refreshToken: generateRefreshToken({
           userId: user.id,
           email: user.email,
-          roles: user.roles.map((ur) => ur.role.name),
+          roles: user.roles.map((ur: any) => ur.role.name),
           sessionId,
         }),
         ipAddress: input.ipAddress,
@@ -317,7 +317,7 @@ export class AuthService {
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
-      roles: user.roles.map((ur) => ur.role.name),
+      roles: user.roles.map((ur: any) => ur.role.name),
       sessionId,
     });
 
@@ -417,7 +417,7 @@ export class AuthService {
         refreshToken: generateRefreshToken({
           userId: user.id,
           email: user.email,
-          roles: user.roles.map((ur) => ur.role.name),
+          roles: user.roles.map((ur: any) => ur.role.name),
           sessionId,
         }),
         ipAddress,
@@ -429,7 +429,7 @@ export class AuthService {
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
-      roles: user.roles.map((ur) => ur.role.name),
+      roles: user.roles.map((ur: any) => ur.role.name),
       sessionId,
     });
 
@@ -547,7 +547,7 @@ export class AuthService {
     const accessToken = generateAccessToken({
       userId: session.user.id,
       email: session.user.email,
-      roles: session.user.roles.map((ur) => ur.role.name),
+      roles: session.user.roles.map((ur: any) => ur.role.name),
       sessionId: session.id,
     });
 
