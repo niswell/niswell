@@ -3,6 +3,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { rateLimit } from './middleware/auth';
 import authRoutes from './routes/auth.routes';
+import viewerProfileRoutes from './routes/viewer-profile.routes';
+import creatorProfileRoutes from './routes/creator-profile.routes';
 import { AppError } from './utils/errors';
 
 const app: Express = express();
@@ -64,6 +66,8 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profiles', viewerProfileRoutes);
+app.use('/api/creator', creatorProfileRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

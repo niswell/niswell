@@ -215,3 +215,355 @@ model EmailVerification {
   @@index([email])
   @@index([token])
 }
+
+// ============= PHASE 2: PROFILES & CREATOR ONBOARDING =============
+
+// Viewer profile information
+model ViewerProfile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profile
+  bio                   String?   @db.Text
+  birthDate             DateTime?
+  gender                String?   // male, female, other
+  location              String?
+
+  // Preferences
+  language              String    @default("en")
+  timezone              String    @default("UTC")
+  profileVisibility     String    @default("public") // public, private
+  activityVisibility    Boolean   @default(true)
+
+  // Notifications
+  emailNotifications    Boolean   @default(true)
+  pushNotifications     Boolean   @default(true)
+
+  // Social
+  followerCount         Int       @default(0)
+  followingCount        Int       @default(0)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  blockedUsers          UserBlock[]
+  blockedByUsers        UserBlock[]
+  reports               UserReport[]
+  subscriptions         CreatorSubscription[]
+
+  @@index([userId])
+}
+
+// Creator profile information
+model CreatorProfile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profile
+  bio                   String?   @db.Text
+  categories            String[]  @default([])
+  languages             String[]  @default(["en"])
+
+  // Status
+  verificationStatus    String    @default("pending") // pending, approved, rejected, expired
+  isMonetized           Boolean   @default(false)
+  creatorSince          DateTime  @default(now())
+
+  // Configuration
+  minTipAmount          Decimal   @default(1.00) @db.Decimal(10, 2)
+  geoBlockedCountries   String[]  @default([])
+
+  // Stats
+  totalEarnings         Decimal   @default(0.00) @db.Decimal(15, 2)
+  totalFollowers        Int       @default(0)
+  totalStreams          Int       @default(0)
+
+  // Payout
+  payoutMethodId        String?
+  payoutFrequency       String    @default("weekly") // daily, weekly, monthly
+  minimumPayoutAmount   Decimal   @default(10.00) @db.Decimal(10, 2)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  verificationUpdatedAt DateTime?
+
+  application           CreatorApplication?
+  verification          CreatorVerification?
+  tipMenus              TipMenu[]
+  schedules             StreamSchedule[]
+  linkedStudios         StudioCreator[]
+  subscriptions         CreatorSubscription[]
+
+  @@index([userId])
+  @@index([verificationStatus])
+  @@index([isMonetized])
+}
+
+// Creator application workflow
+model CreatorApplication {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String    @unique
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Application details
+  status                String    @default("pending") // pending, approved, rejected, needs_revision
+  submittedAt           DateTime  @default(now())
+  reviewedAt            DateTime?
+  reviewedBy            String?
+
+  // Application data
+  reasonForRejection    String?   @db.Text
+  notes                 String?   @db.Text
+
+  // Revision tracking
+  revisionCount         Int       @default(0)
+  lastRevisionAt        DateTime?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status])
+  @@index([submittedAt])
+}
+
+// Creator verification status
+model CreatorVerification {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String    @unique
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Verification status
+  status                String    @default("pending") // pending, approved, rejected, expired
+  expiresAt             DateTime?
+
+  // Age verification
+  ageVerified           Boolean   @default(false)
+  ageVerifiedAt         DateTime?
+  ageVerificationMethod String?   // onfido, au10tec, manual
+
+  // Identity verification
+  identityVerified      Boolean   @default(false)
+  identityVerifiedAt    DateTime?
+  identityDocument      String?   // Stored securely, reference only
+
+  // Liveness check
+  livenessVerified      Boolean   @default(false)
+  livenessVerifiedAt    DateTime?
+
+  // Performer consent
+  consentGiven          Boolean   @default(false)
+  consentGivenAt        DateTime?
+  consentDocuments      String[]  @default([])
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// Tip menu configuration
+model TipMenu {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Tip details
+  label                 String    // "Small Tip", "Coffee", etc.
+  amount                Decimal   @db.Decimal(10, 2)
+  icon                  String?   // emoji or icon identifier
+  order                 Int       // display order
+  isActive              Boolean   @default(true)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([creatorProfileId, label])
+  @@index([creatorProfileId])
+  @@index([isActive])
+}
+
+// Stream schedule for creators
+model StreamSchedule {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Schedule
+  dayOfWeek             Int       // 0-6 (Sunday-Saturday)
+  startTime             String    // "14:00" (HH:mm format)
+  endTime               String    // "20:00" (HH:mm format)
+  timezone              String    @default("UTC")
+
+  // Settings
+  isActive              Boolean   @default(true)
+  notifyFollowers       Boolean   @default(true)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([creatorProfileId, dayOfWeek])
+  @@index([creatorProfileId])
+  @@index([isActive])
+}
+
+// User blocking
+model UserBlock {
+  id                    String    @id @default(cuid())
+  blockerProfileId      String
+  blockerProfile        ViewerProfile @relation("blocker", fields: [blockerProfileId], references: [id], onDelete: Cascade)
+
+  blockedProfileId      String
+  blockedProfile        ViewerProfile @relation("blocked", fields: [blockedProfileId], references: [id], onDelete: Cascade)
+
+  reason                String?
+  createdAt             DateTime  @default(now())
+
+  @@unique([blockerProfileId, blockedProfileId])
+  @@index([blockerProfileId])
+  @@index([blockedProfileId])
+}
+
+// User/content reporting
+model UserReport {
+  id                    String    @id @default(cuid())
+  reporterProfileId     String
+  reporterProfile       ViewerProfile @relation(fields: [reporterProfileId], references: [id], onDelete: Cascade)
+
+  // Report subject
+  reportedUserId        String    // User ID being reported
+  contentType           String    // profile, stream, message, comment
+  contentId             String?   // ID of reported content
+
+  // Report details
+  category              String    // harassment, spam, inappropriate_content, scam, etc.
+  description           String?   @db.Text
+  evidence              String[]  @default([])
+
+  // Status
+  status                String    @default("pending") // pending, reviewing, resolved, dismissed
+  resolution            String?   // Action taken
+  resolvedAt            DateTime?
+  resolvedBy            String?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
+// Studio/Agency management
+model Studio {
+  id                    String    @id @default(cuid())
+  ownerId               String
+
+  // Studio info
+  name                  String
+  description           String?   @db.Text
+  legalName             String?
+  taxId                 String?
+
+  // Contact
+  email                 String
+  phoneNumber           String?
+  website               String?
+
+  // Verification
+  isVerified            Boolean   @default(false)
+  verifiedAt            DateTime?
+
+  // Settings
+  commissionPercentage  Decimal   @default(30.00) @db.Decimal(5, 2)
+  payoutAccount         String?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  linkedCreators        StudioCreator[]
+
+  @@index([ownerId])
+  @@index([isVerified])
+}
+
+// Link creators to studios
+model StudioCreator {
+  id                    String    @id @default(cuid())
+  studioId              String
+  studio                Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Relationship
+  role                  String    @default("performer") // owner, manager, performer
+  contractStart         DateTime?
+  contractEnd           DateTime?
+  isActive              Boolean   @default(true)
+
+  // Permissions
+  canManageProfile      Boolean   @default(false)
+  canAccessEarnings     Boolean   @default(false)
+  canManagePayout       Boolean   @default(false)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([studioId, creatorProfileId])
+  @@index([studioId])
+  @@index([creatorProfileId])
+  @@index([isActive])
+}
+
+// Creator subscriptions
+model CreatorSubscription {
+  id                    String    @id @default(cuid())
+  subscriberProfileId   String
+  subscriberProfile     ViewerProfile @relation(fields: [subscriberProfileId], references: [id], onDelete: Cascade)
+
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Subscription details
+  tier                  String    // gold, silver, bronze (custom names)
+  price                 Decimal   @db.Decimal(10, 2)
+
+  // Status
+  status                String    @default("active") // active, paused, cancelled
+  renewalDate           DateTime
+  cancelledAt           DateTime?
+
+  // Audit
+  subscribedAt          DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([subscriberProfileId, creatorProfileId])
+  @@index([subscriberProfileId])
+  @@index([creatorProfileId])
+  @@index([status])
+}
+
+// Extend User model with profile relations
+model UserExtended {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+
+  viewerProfile         ViewerProfile?
+  creatorProfile        CreatorProfile?
+  studio                Studio?
+
+  @@index([userId])
+}
