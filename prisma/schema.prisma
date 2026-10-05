@@ -255,6 +255,10 @@ model ViewerProfile {
   reports               UserReport[]
   subscriptions         CreatorSubscription[]
 
+  // Payment relations
+  paymentMethods        PaymentMethod[]
+  payerTransactions     Transaction[] @relation("PayerTransactions")
+
   @@index([userId])
 }
 
@@ -299,6 +303,12 @@ model CreatorProfile {
   schedules             StreamSchedule[]
   linkedStudios         StudioCreator[]
   subscriptions         CreatorSubscription[]
+
+  // Payment relations
+  stripeAccount         StripeAccount?
+  recipientTransactions Transaction[]
+  payouts               Payout[]
+  paymentReports        PaymentReport[]
 
   @@index([userId])
   @@index([verificationStatus])
@@ -557,3 +567,237 @@ model CreatorSubscription {
   @@index([creatorProfileId])
   @@index([status])
 }
+
+// Phase 3: Payment & Monetization
+
+// Stripe account for creators
+model StripeAccount {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String    @unique
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Stripe details
+  stripeAccountId       String    @unique
+  accountStatus         String    @default("pending") // pending, active, restricted, suspended
+  accountType           String    @default("express") // standard, express
+
+  // Verification
+  chargesEnabled        Boolean   @default(false)
+  payoutsEnabled        Boolean   @default(false)
+  verificationStatus    String    @default("unverified") // unverified, verified, restricted
+
+  // Banking info
+  bankAccountId         String?   @unique
+  bankAccountLastFour   String?
+  bankAccountBrand      String?
+
+  // Tax info
+  taxId                 String?
+  businessType          String?   // individual, sole_proprietor, partnership, corporation
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  connectedAt           DateTime?
+  disconnectedAt        DateTime?
+
+  @@index([stripeAccountId])
+  @@index([accountStatus])
+}
+
+// Payment methods (credit cards, etc)
+model PaymentMethod {
+  id                    String    @id @default(cuid())
+  viewerProfileId       String
+  viewerProfile         ViewerProfile @relation(fields: [viewerProfileId], references: [id], onDelete: Cascade)
+
+  // Stripe details
+  stripePaymentMethodId String    @unique
+  type                  String    // card, bank_account
+
+  // Card details (if card)
+  cardBrand             String?   // visa, mastercard, amex, discover
+  cardLastFour          String?
+  cardExpMonth          Int?
+  cardExpYear           Int?
+
+  // Bank account details (if bank)
+  bankAccountLastFour   String?
+  bankRoutingNumber     String?
+
+  // Status
+  isDefault             Boolean   @default(false)
+  isValid               Boolean   @default(true)
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+
+  @@index([viewerProfileId])
+  @@index([stripePaymentMethodId])
+}
+
+// Transactions (tips, subscriptions, etc)
+model Transaction {
+  id                    String    @id @default(cuid())
+  stripeTransactionId   String?   @unique
+
+  // Payer (viewer)
+  payerProfileId        String
+  payerProfile          ViewerProfile @relation("PayerTransactions", fields: [payerProfileId], references: [id], onDelete: Cascade)
+
+  // Recipient (creator)
+  recipientProfileId    String
+  recipientProfile      CreatorProfile @relation(fields: [recipientProfileId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  type                  String    // tip, subscription, purchase
+  amount                Decimal   @db.Decimal(10, 2)
+  currency              String    @default("usd")
+
+  // Fee breakdown
+  platformFee           Decimal   @db.Decimal(10, 2)
+  stripeFee             Decimal   @db.Decimal(10, 2)
+  creatorEarnings       Decimal   @db.Decimal(10, 2)
+
+  // Subscription details (if applicable)
+  subscriptionTier      String?
+  subscriptionId        String?
+  billingCycleStart     DateTime?
+  billingCycleEnd       DateTime?
+
+  // Status
+  status                String    @default("pending") // pending, processing, succeeded, failed, refunded
+  failureReason         String?
+
+  // Dispute
+  isDisputed            Boolean   @default(false)
+  disputeId             String?
+
+  // Metadata
+  description           String?
+  metadata              String?   @db.Text // JSON string for custom data
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  processedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  @@index([payerProfileId])
+  @@index([recipientProfileId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Creator payouts
+model Payout {
+  id                    String    @id @default(cuid())
+  stripPayoutId         String?   @unique
+
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Payout details
+  amount                Decimal   @db.Decimal(10, 2)
+  currency              String    @default("usd")
+
+  // Period
+  payoutPeriodStart     DateTime
+  payoutPeriodEnd       DateTime
+
+  // Status
+  status                String    @default("pending") // pending, processing, paid, failed, cancelled
+  failureReason         String?
+
+  // Metadata
+  bankAccount           String?   // Last 4 digits or identifier
+  description           String?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  processedAt           DateTime?
+  completedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  @@index([creatorProfileId])
+  @@index([status])
+  @@index([payoutPeriodStart])
+}
+
+// Payment disputes/chargebacks
+model PaymentDispute {
+  id                    String    @id @default(cuid())
+  stripeDisputeId       String?   @unique
+  transactionId         String
+  transaction           Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  // Dispute details
+  reason                String    // chargeback, fraud, product_unacceptable, etc
+  amount                Decimal   @db.Decimal(10, 2)
+  currency              String    @default("usd")
+
+  // Status
+  status                String    @default("open") // open, warning_needs_response, warning_under_review, warning_closed, lost, won, warning_won
+
+  // Evidence
+  customerStatement     String?   @db.Text
+  evidence              String[]  @default([]) // JSON array of URLs
+
+  // Timeline
+  dueDateAt             DateTime?
+  closedAt              DateTime?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([transactionId])
+  @@index([status])
+}
+
+// Financial reports for creators
+model PaymentReport {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Period
+  reportPeriodStart     DateTime
+  reportPeriodEnd       DateTime
+
+  // Summary
+  totalRevenue          Decimal   @db.Decimal(12, 2)
+  totalTips             Decimal   @db.Decimal(12, 2)
+  totalSubscriptions    Decimal   @db.Decimal(12, 2)
+  totalPlatformFees     Decimal   @db.Decimal(12, 2)
+  totalStripeFees       Decimal   @db.Decimal(12, 2)
+  totalPayouts          Decimal   @db.Decimal(12, 2)
+
+  // Metrics
+  totalTransactions     Int
+  uniquePatrons        Int
+  averageTransaction    Decimal   @db.Decimal(10, 2)
+
+  // Breakdown
+  topTransactionTypes   String    @db.Text // JSON object
+  topTipAmounts         String    @db.Text // JSON array
+
+  // File storage
+  pdfUrl                String?
+  csvUrl                String?
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  generatedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([creatorProfileId, reportPeriodStart, reportPeriodEnd])
+  @@index([creatorProfileId])
+  @@index([reportPeriodStart])
+}
+
+// Add relations to existing models
+// ViewerProfile: add paymentMethods and transactions as payer
+// CreatorProfile: add stripeAccount, transactions as recipient, payouts, reports
