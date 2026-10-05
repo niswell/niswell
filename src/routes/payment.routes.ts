@@ -37,7 +37,7 @@ router.post('/creator/setup', authenticateToken, async (req: AuthRequest, res, n
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!creator) {
@@ -61,7 +61,7 @@ router.get('/creator/login-link', authenticateToken, async (req: AuthRequest, re
     const stripeAccount = await prisma.stripeAccount.findFirst({
       where: {
         creatorProfile: {
-          user: { id: user.id },
+          user: { id: user.userId },
         },
       },
     });
@@ -89,7 +89,7 @@ router.post('/methods', authenticateToken, async (req: AuthRequest, res, next) =
     const user = req.user!;
 
     const viewer = await prisma.viewerProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!viewer) {
@@ -111,7 +111,7 @@ router.get('/methods', authenticateToken, async (req: AuthRequest, res, next) =>
   try {
     const user = req.user!;
     const viewer = await prisma.viewerProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!viewer) {
@@ -140,7 +140,7 @@ router.post('/tips', authenticateToken, async (req: AuthRequest, res, next) => {
     const user = req.user!;
 
     const viewer = await prisma.viewerProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!viewer) {
@@ -170,7 +170,7 @@ router.post('/subscriptions', authenticateToken, async (req: AuthRequest, res, n
     const user = req.user!;
 
     const viewer = await prisma.viewerProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!viewer) {
@@ -199,7 +199,7 @@ router.get('/transactions', authenticateToken, async (req: AuthRequest, res, nex
   try {
     const user = req.user!;
     const viewer = await prisma.viewerProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!viewer) {
@@ -228,7 +228,7 @@ router.get('/earnings', authenticateToken, async (req: AuthRequest, res, next) =
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!creator) {
@@ -287,7 +287,7 @@ router.post('/payouts', authenticateToken, async (req: AuthRequest, res, next) =
     const user = req.user!;
 
     const creator = await prisma.creatorProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!creator) {
@@ -309,7 +309,7 @@ router.get('/reports', authenticateToken, async (req: AuthRequest, res, next) =>
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!creator) {
