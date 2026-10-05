@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { execSync } from 'child_process';
 import app from './app';
 import { prisma } from './lib/prisma';
 
@@ -13,6 +14,15 @@ async function startServer() {
     // Test database connection
     await prisma.$executeRaw`SELECT 1`;
     console.log('✓ Database connection established');
+
+    // Run database migrations
+    try {
+      console.log('🔧 Running database migrations...');
+      execSync('npx prisma db push --skip-generate', { stdio: 'inherit' });
+      console.log('✓ Database migrations completed');
+    } catch (migrationError) {
+      console.warn('⚠️ Migration warning:', migrationError);
+    }
 
     // Start server
     const server = app.listen(PORT, () => {
