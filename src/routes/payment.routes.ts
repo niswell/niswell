@@ -1,19 +1,10 @@
-import { Router, Request } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { stripeService } from '../services/stripe.service';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../utils/errors';
 import Stripe from 'stripe';
-
-// Extend Express Request to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { id: string; email: string };
-    }
-  }
-}
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');

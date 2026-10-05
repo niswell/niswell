@@ -411,14 +411,18 @@ export class StripeService {
     });
 
     if (transaction) {
+      const dueDateAt = (dispute as any).evidence_due_by
+        ? new Date((dispute as any).evidence_due_by * 1000)
+        : null;
+
       await prisma.paymentDispute.create({
         data: {
           stripeDisputeId: dispute.id,
           transactionId: transaction.id,
           reason: dispute.reason || 'unknown',
           amount: new Prisma.Decimal(dispute.amount / 100),
-          status: dispute.status,
-          dueDateAt: dispute.evidence_due_by ? new Date(dispute.evidence_due_by * 1000) : null,
+          status: dispute.status as string,
+          dueDateAt,
         },
       });
 
