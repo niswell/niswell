@@ -94,7 +94,7 @@ export class CreatorProfileService {
       where: { userId },
     });
 
-    if (existing?.application) {
+    if (existing) {
       const app = await prisma.creatorApplication.findUnique({
         where: { creatorProfileId: existing.id },
       });
