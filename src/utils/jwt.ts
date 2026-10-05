@@ -22,10 +22,9 @@ export function generateAccessToken(payload: Omit<TokenPayload, 'iat' | 'exp'>):
 }
 
 export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload as object, JWT_SECRET as string, {
+  return jwt.sign({ ...payload, jti: uuidv4() } as object, JWT_SECRET as string, {
     expiresIn: REFRESH_EXPIRY as SignOptions['expiresIn'],
     algorithm: 'HS256',
-    jti: uuidv4(),
   } as jwt.SignOptions);
 }
 
