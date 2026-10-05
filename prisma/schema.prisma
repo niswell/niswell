@@ -673,7 +673,7 @@ model Transaction {
 
   // Dispute
   isDisputed            Boolean   @default(false)
-  disputeId             String?
+  disputes              PaymentDispute[]
 
   // Metadata
   description           String?
