@@ -1,10 +1,19 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { z } from 'zod';
 import { stripeService } from '../services/stripe.service';
 import { authenticateToken } from '../middleware/auth';
-import { prisma } from '../db';
+import { prisma } from '../lib/prisma';
 import { AppError } from '../utils/errors';
 import Stripe from 'stripe';
+
+// Extend Express Request to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; email: string };
+    }
+  }
+}
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
@@ -250,16 +259,16 @@ router.get('/earnings', authenticateToken, async (req, res, next) => {
     });
 
     const totalTips = transactions
-      .filter((t) => t.type === 'tip')
-      .reduce((sum, t) => sum + Number(t.creatorEarnings), 0);
+      .filter((t: any) => t.type === 'tip')
+      .reduce((sum: number, t: any) => sum + Number(t.creatorEarnings), 0);
 
     const totalSubscriptions = transactions
-      .filter((t) => t.type === 'subscription')
-      .reduce((sum, t) => sum + Number(t.creatorEarnings), 0);
+      .filter((t: any) => t.type === 'subscription')
+      .reduce((sum: number, t: any) => sum + Number(t.creatorEarnings), 0);
 
     const totalPaid = payouts
-      .filter((p) => p.status === 'paid')
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+      .filter((p: any) => p.status === 'paid')
+      .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
     const pendingBalance = Number(creator.totalEarnings) - totalPaid;
 
