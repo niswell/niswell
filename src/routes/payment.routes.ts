@@ -33,7 +33,7 @@ const payoutSchema = z.object({
  * Create Stripe account for creator
  * POST /api/payments/creator/setup
  */
-router.post('/creator/setup', authenticateToken, async (req, res, next) => {
+router.post('/creator/setup', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
@@ -55,7 +55,7 @@ router.post('/creator/setup', authenticateToken, async (req, res, next) => {
  * Get Stripe login link for creator
  * GET /api/payments/creator/login-link
  */
-router.get('/creator/login-link', authenticateToken, async (req, res, next) => {
+router.get('/creator/login-link', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const stripeAccount = await prisma.stripeAccount.findFirst({
@@ -83,7 +83,7 @@ router.get('/creator/login-link', authenticateToken, async (req, res, next) => {
  * Save payment method
  * POST /api/payments/methods
  */
-router.post('/methods', authenticateToken, async (req, res, next) => {
+router.post('/methods', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const { paymentMethodId } = z.object({ paymentMethodId: z.string() }).parse(req.body);
     const user = req.user!;
@@ -107,7 +107,7 @@ router.post('/methods', authenticateToken, async (req, res, next) => {
  * Get payment methods
  * GET /api/payments/methods
  */
-router.get('/methods', authenticateToken, async (req, res, next) => {
+router.get('/methods', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const viewer = await prisma.viewerProfile.findUnique({
@@ -134,7 +134,7 @@ router.get('/methods', authenticateToken, async (req, res, next) => {
  * Send a tip
  * POST /api/payments/tips
  */
-router.post('/tips', authenticateToken, async (req, res, next) => {
+router.post('/tips', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const input = tipSchema.parse(req.body);
     const user = req.user!;
@@ -164,7 +164,7 @@ router.post('/tips', authenticateToken, async (req, res, next) => {
  * Subscribe to creator
  * POST /api/payments/subscriptions
  */
-router.post('/subscriptions', authenticateToken, async (req, res, next) => {
+router.post('/subscriptions', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const input = subscriptionSchema.parse(req.body);
     const user = req.user!;
@@ -195,7 +195,7 @@ router.post('/subscriptions', authenticateToken, async (req, res, next) => {
  * Get transaction history
  * GET /api/payments/transactions
  */
-router.get('/transactions', authenticateToken, async (req, res, next) => {
+router.get('/transactions', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const viewer = await prisma.viewerProfile.findUnique({
@@ -224,7 +224,7 @@ router.get('/transactions', authenticateToken, async (req, res, next) => {
  * Get creator earnings dashboard
  * GET /api/payments/earnings
  */
-router.get('/earnings', authenticateToken, async (req, res, next) => {
+router.get('/earnings', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
@@ -281,7 +281,7 @@ router.get('/earnings', authenticateToken, async (req, res, next) => {
  * Request payout
  * POST /api/payments/payouts
  */
-router.post('/payouts', authenticateToken, async (req, res, next) => {
+router.post('/payouts', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const { amount } = payoutSchema.parse(req.body);
     const user = req.user!;
@@ -305,7 +305,7 @@ router.post('/payouts', authenticateToken, async (req, res, next) => {
  * Get payment reports
  * GET /api/payments/reports
  */
-router.get('/reports', authenticateToken, async (req, res, next) => {
+router.get('/reports', authenticateToken, async (req: AuthRequest, res, next) => {
   try {
     const user = req.user!;
     const creator = await prisma.creatorProfile.findUnique({
