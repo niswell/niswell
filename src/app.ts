@@ -5,6 +5,7 @@ import { rateLimit } from './middleware/auth';
 import authRoutes from './routes/auth.routes';
 import viewerProfileRoutes from './routes/viewer-profile.routes';
 import creatorProfileRoutes from './routes/creator-profile.routes';
+import paymentRoutes from './routes/payment.routes';
 import { AppError } from './utils/errors';
 
 const app: Express = express();
@@ -30,6 +31,12 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
+);
+
+// Stripe webhook middleware (must be before json parser)
+app.use(
+  '/api/payments/webhooks/stripe',
+  express.raw({ type: 'application/json' })
 );
 
 // Body parser middleware
@@ -68,6 +75,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', viewerProfileRoutes);
 app.use('/api/creator', creatorProfileRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
