@@ -66,7 +66,6 @@ router.post(
       password: body.password,
       confirmPassword: body.confirmPassword,
       displayName: body.displayName,
-      accountType: (req.body as any).accountType,
     });
 
     // Get user and create session for immediate access
@@ -79,10 +78,20 @@ router.post(
       throw new AppError(500, 'USER_NOT_FOUND', 'Failed to create user');
     }
 
+    // Generate refresh token for session
+    const { generateRefreshToken } = require('../utils/jwt');
+    const refreshToken = generateRefreshToken({
+      userId: user.id,
+      email: user.email,
+      roles: user.roles.map((ur: any) => ur.role.name),
+      sessionId: 'temp',
+    });
+
     // Create session
     const session = await prisma.session.create({
       data: {
         userId: user.id,
+        refreshToken,
         userAgent: getUserAgent(req),
         ipAddress: getClientIp(req),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
