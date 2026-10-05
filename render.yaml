@@ -2,14 +2,13 @@ services:
   - type: web
     name: niswell-app
     runtime: node
-    buildCommand: npm install && npm run build && npx prisma generate
+    buildCommand: npm install && npm run build
     startCommand: node dist/server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
-    autoDeploy: false
 
   - type: pserv
     name: niswell-db
