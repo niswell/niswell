@@ -11,11 +11,12 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-API_URL="http://localhost:3000"
+API_URL="${1:-http://localhost:3000}"
 EMAIL="test-$(date +%s)@example.com"
 PASSWORD="SecurePassword123!@#"
 
-echo -e "${BLUE}=== Adult Live Platform Testing ===${NC}\n"
+echo -e "${BLUE}=== Adult Live Platform Testing ===${NC}"
+echo -e "${BLUE}Testing: $API_URL${NC}\n"
 
 # Check if server is running
 echo -e "${BLUE}1. Checking if server is running...${NC}"
