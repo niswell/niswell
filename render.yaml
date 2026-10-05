@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: niswell-backend
+    env: node
+    region: oregon
+    plan: starter
+    repo: https://github.com/niswell/niswell
+    branch: claude/install-ui-ux-pro-max-skill-c1mnla
+    buildCommand: npm install
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: TOTP_ISSUER
+        value: Niswell
+      - key: CORS_ORIGIN
+        value: https://niswell-frontend.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - fromGroup: niswell-db-group
+
+  - type: pserv
+    name: niswell-db
+    env: postgres
+    region: oregon
+    plan: starter
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Allow all connections for now
+
+envVarGroups:
+  - name: niswell-db-group
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: niswell-db
+          envVarKey: DATABASE_URL
+
+  - name: stripe-keys
+    envVars:
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
