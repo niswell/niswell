@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
 import { execSync } from 'child_process';
+import { createServer } from 'http';
+import { Server as SocketServer } from 'socket.io';
 import app from './app';
 import { prisma } from './lib/prisma';
+import { webrtcService } from './services/webrtc.service';
+import { socketService } from './services/socket.service';
 
 // Load environment variables
 dotenv.config();
@@ -24,12 +28,32 @@ async function startServer() {
       console.warn('⚠️ Migration warning:', migrationError);
     }
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.io
+    const io = new SocketServer(httpServer, {
+      cors: {
+        origin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
+        credentials: true,
+      },
+      transports: ['websocket', 'polling'],
+    });
+
+    // Initialize WebRTC and Socket services
+    webrtcService.init(io);
+    socketService.init(io);
+
+    // Store io instance in services for access from routes
+    (socketService as any).io = io;
+
     // Start server
-    const server = app.listen(PORT, () => {
+    const server = httpServer.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);
       console.log(`✓ Environment: ${NODE_ENV}`);
       console.log(`✓ API URL: http://localhost:${PORT}/api`);
       console.log(`✓ Health check: http://localhost:${PORT}/health`);
+      console.log(`✓ WebSocket ready for streaming`);
     });
 
     // Graceful shutdown

@@ -259,6 +259,9 @@ model ViewerProfile {
   paymentMethods        PaymentMethod[]
   payerTransactions     Transaction[] @relation("PayerTransactions")
 
+  // Streaming relations
+  streamViewers         StreamViewer[]
+
   @@index([userId])
 }
 
@@ -309,6 +312,9 @@ model CreatorProfile {
   recipientTransactions Transaction[]
   payouts               Payout[]
   paymentReports        PaymentReport[]
+
+  // Streaming relations
+  streams               Stream[]
 
   @@index([userId])
   @@index([verificationStatus])
@@ -798,6 +804,127 @@ model PaymentReport {
   @@index([reportPeriodStart])
 }
 
+// ============= STREAMING MODELS (Phase 4) =============
+
+// Live streams
+model Stream {
+  id                    String    @id @default(cuid())
+  creatorProfileId      String
+  creatorProfile        CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  // Stream info
+  title                 String
+  description           String?
+  thumbnail             String?
+  category              String?
+
+  // Stream status: scheduled, live, ended, archived
+  status                String    @default("scheduled")
+
+  // Timing
+  scheduledStartTime    DateTime?
+  startedAt             DateTime?
+  endedAt               DateTime?
+  duration              Int?      // in seconds
+
+  // Stats
+  viewerCount           Int       @default(0)
+  peakViewerCount       Int       @default(0)
+  totalViews            Int       @default(0)
+
+  // Settings
+  isPrivate             Boolean   @default(false)
+  allowChat             Boolean   @default(true)
+  allowTips             Boolean   @default(true)
+  recordStream          Boolean   @default(true)
+
+  // Relations
+  messages              ChatMessage[]
+  recordings            StreamRecording[]
+  viewers               StreamViewer[]
+
+  // Audit
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([creatorProfileId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// Chat messages during streams
+model ChatMessage {
+  id                    String    @id @default(cuid())
+  streamId              String
+  stream                Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  senderProfileId       String    // Can be viewer or creator
+  message               String
+  messageType           String    @default("text") // text, tip_notification, system
+
+  // For moderators
+  isModerated           Boolean   @default(false)
+  isPinned              Boolean   @default(false)
+
+  createdAt             DateTime  @default(now())
+
+  @@index([streamId])
+  @@index([senderProfileId])
+  @@index([createdAt])
+}
+
+// Stream recordings
+model StreamRecording {
+  id                    String    @id @default(cuid())
+  streamId              String
+  stream                Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  // File info
+  fileName              String
+  fileUrl               String?
+  duration              Int       // in seconds
+  size                  BigInt    // in bytes
+  format                String    @default("mp4")
+
+  // Status: processing, ready, archived, deleted
+  status                String    @default("processing")
+  processedAt           DateTime?
+
+  // Storage
+  storageProvider       String    @default("s3") // s3, gcs, etc
+  storagePath           String
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([streamId])
+  @@index([status])
+}
+
+// Active stream viewers
+model StreamViewer {
+  id                    String    @id @default(cuid())
+  streamId              String
+  stream                Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  viewerProfileId       String
+  viewerProfile         ViewerProfile @relation(fields: [viewerProfileId], references: [id], onDelete: Cascade)
+
+  // Connection
+  joinedAt              DateTime  @default(now())
+  leftAt                DateTime?
+  watchDuration         Int       @default(0) // in seconds
+
+  // Stats
+  isActive              Boolean   @default(true)
+  deviceType            String?   // mobile, desktop, tablet
+  connectionQuality     String?   // good, fair, poor
+
+  @@unique([streamId, viewerProfileId])
+  @@index([streamId])
+  @@index([viewerProfileId])
+}
+
 // Add relations to existing models
-// ViewerProfile: add paymentMethods and transactions as payer
-// CreatorProfile: add stripeAccount, transactions as recipient, payouts, reports
+// ViewerProfile: add paymentMethods, transactions as payer, streamViewers
+// CreatorProfile: add stripeAccount, transactions as recipient, payouts, reports, streams

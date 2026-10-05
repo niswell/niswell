@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import viewerProfileRoutes from './routes/viewer-profile.routes';
 import creatorProfileRoutes from './routes/creator-profile.routes';
 import paymentRoutes from './routes/payment.routes';
+import streamRoutes from './routes/stream.routes';
 import { AppError } from './utils/errors';
 
 const app: Express = express();
@@ -76,6 +77,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/profiles', viewerProfileRoutes);
 app.use('/api/creator', creatorProfileRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/streams', streamRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
