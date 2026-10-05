@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { AppError } from '../utils/errors';
+import { generateAccessToken } from '../utils/jwt';
+import { prisma } from '../lib/prisma';
 import { z } from 'zod';
 
 const router = Router();
@@ -64,13 +66,41 @@ router.post(
       password: body.password,
       confirmPassword: body.confirmPassword,
       displayName: body.displayName,
+      accountType: (req.body as any).accountType,
+    });
+
+    // Get user and create session for immediate access
+    const user = await prisma.user.findUnique({
+      where: { id: result.userId },
+      include: { roles: { include: { role: true } } },
+    });
+
+    if (!user) {
+      throw new AppError(500, 'USER_NOT_FOUND', 'Failed to create user');
+    }
+
+    // Create session
+    const session = await prisma.session.create({
+      data: {
+        userId: user.id,
+        userAgent: getUserAgent(req),
+        ipAddress: getClientIp(req),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    // Generate access token
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      roles: user.roles.map((ur: any) => ur.role.name),
+      sessionId: session.id,
     });
 
     res.status(201).json({
-      message: 'Registration successful. Please verify your email.',
+      message: 'Registration successful',
       userId: result.userId,
-      // Note: In production, send email with verification link
-      // For testing, you can use the token directly: /auth/verify-email?token={token}
+      accessToken,
     });
   })
 );
